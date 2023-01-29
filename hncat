@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+# See: https://github.com/HackerNews/API#items
+
+URL = "https://hacker-news.firebaseio.com/v0/item/{}.json"
+
+import os,sys,json,html
+import urllib.request
+
+def hnparse(s):
+    return html.unescape(s).replace("<p>", "\n\n")
+
+
+if len(sys.argv) < 2:
+    print("Usage:", sys.argv[0], "[-d or --detailed] <item id> [item id] ...")
+    print()
+    sys.exit(1)
+
+detailed = False
+
+for a in sys.argv[1:]:
+    if a == '--':
+        break
+    elif a in ('-d', '--detailed'):
+        detailed = True
+
+notfirst = False
+for a in sys.argv[1:]:
+    if a in ('--', '-d', '--detailed'):
+        continue
+
+    try:
+        int(a)
+    except:
+        print("Invalid item id:", a)
+        print()
+        sys.exit(1)
+
+    if notfirst:
+        print("==")
+    else:
+        notfirst = True
+
+    with urllib.request.urlopen(URL.format(a)) as response:
+        data = json.loads(response.read())
+        if data['type'] == 'comment':
+            print(hnparse(data['text']))
+
+        else:
+            print(hnparse(data['title']))
+            text = data.get('text', None)
+            if text is not None:
+                print()
+                print(hnparse(text))
+
+        if detailed:
+            print()
+            print("--", data['by'])
+            if data['type'] == 'comment':
+                print("## Parent: hncat", str(data['parent']))
+            print("## Children: hncat", ' '.join((str(i) for i in data['kids'])))
